@@ -54,7 +54,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ===== API =====
-    if (req.url.startsWith('/api/pokemon/') && req.method === 'GET') {
+    if (req.url.startsWith('/api/pokemon1/') && req.method === 'GET') {
 
         try {
             if (!SUPABASE_URL || !SUPABASE_KEY) {
@@ -68,7 +68,7 @@ const server = http.createServer(async (req, res) => {
                 return res.end(JSON.stringify({ error: "Nombre requerido" }));
             }
 
-            const url = `${SUPABASE_URL}/pokemon?nombre=ilike.*${name}*`;
+            const url = `${SUPABASE_URL}/pokemon1?nombre=ilike.*${name}*`;
 
             console.log("🔍 Buscando:", url);
 
