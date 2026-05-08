@@ -4,27 +4,42 @@ const fs = require('fs');
 const path = require('path');
 
 const PORT = process.env.PORT || 3001;
-const MONGO_URI = process.env.MONGO_URI;
+
+// ⚠️ PEGA AQUÍ TU URI REAL DE MONGODB ATLAS
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://kevin:<db_password>@pokemon1.ddcxqpt.mongodb.net/?appName=pokemon1";
+
+// ===== CONFIG =====
+const DB_NAME = "pokeapi";
+const COLLECTION_NAME = "pokemon";
 
 let db = null;
 
-// 🔌 conexión Mongo
+// ===== CONEXIÓN MONGO =====
 async function connectDB() {
+
     if (db) return db;
 
-    if (!MONGO_URI) {
-        throw new Error("MONGO_URI no está definida");
+    try {
+
+        const client = new MongoClient(MONGO_URI);
+
+        await client.connect();
+
+        console.log("✅ MongoDB conectado");
+
+        db = client.db(DB_NAME);
+
+        return db;
+
+    } catch (error) {
+
+        console.error("❌ Error conectando Mongo:", error.message);
+
+        throw error;
     }
-
-    const client = new MongoClient(MONGO_URI);
-    await client.connect();
-
-    db = client.db("pokeapi");
-    console.log("Mongo conectado");
-
-    return db;
 }
 
+// ===== SERVER =====
 const server = http.createServer(async (req, res) => {
 
     // ===== CORS =====
@@ -37,17 +52,36 @@ const server = http.createServer(async (req, res) => {
         return res.end();
     }
 
+    // ===== HOME =====
+    if (req.url === '/') {
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+
+        return res.end(JSON.stringify({
+            mensaje: "Microservicio Mongo funcionando",
+            endpoints: [
+                "/api/pokemon/pikachu",
+                "/docs"
+            ]
+        }));
+    }
+
     // ===== SWAGGER UI =====
     if (req.url === '/docs') {
+
         res.writeHead(200, { 'Content-Type': 'text/html' });
+
         return res.end(`
             <html>
             <head>
-                <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+                <title>Swagger Mongo API</title>
+                <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css">
             </head>
             <body>
                 <div id="swagger-ui"></div>
-                <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+
+                <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+
                 <script>
                     SwaggerUIBundle({
                         url: '/swagger.json',
@@ -59,76 +93,126 @@ const server = http.createServer(async (req, res) => {
         `);
     }
 
-    // ===== SWAGGER JSON (USANDO TU ARCHIVO REAL) =====
+    // ===== SWAGGER JSON =====
     if (req.url === '/swagger.json') {
+
         try {
-            const filePath = path.join(__dirname, 'swagger-mongo.json');
 
-            console.log("📄 Swagger path:", filePath);
+            const swaggerPath = path.join(__dirname, 'swagger-mongo.json');
 
-            if (!fs.existsSync(filePath)) {
-                throw new Error("swagger-mongo.json no existe");
+            if (!fs.existsSync(swaggerPath)) {
+
+                throw new Error("No existe swagger-mongo.json");
             }
 
-            const data = fs.readFileSync(filePath, 'utf8');
+            const swaggerData = fs.readFileSync(swaggerPath, 'utf8');
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            return res.end(data);
+            res.writeHead(200, {
+                'Content-Type': 'application/json'
+            });
 
-        } catch (err) {
-            console.error("❌ ERROR SWAGGER:", err.message);
+            return res.end(swaggerData);
 
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify({ error: err.message }));
+        } catch (error) {
+
+            console.error("❌ Swagger Error:", error.message);
+
+            res.writeHead(500, {
+                'Content-Type': 'application/json'
+            });
+
+            return res.end(JSON.stringify({
+                error: error.message
+            }));
         }
     }
 
-    // ===== API =====
+    // ===== API POKEMON =====
     if (req.url.startsWith('/api/pokemon/') && req.method === 'GET') {
+
         try {
+
             const database = await connectDB();
 
-            const name = decodeURIComponent(req.url.split('/').pop()).trim();
+            const nombre = decodeURIComponent(
+                req.url.split('/').pop()
+            ).trim();
 
-            if (!name) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Nombre requerido" }));
+            if (!nombre) {
+
+                res.writeHead(400, {
+                    'Content-Type': 'application/json'
+                });
+
+                return res.end(JSON.stringify({
+                    error: "Nombre requerido"
+                }));
             }
 
-            const pokemon = await database.collection('pokemon').findOne({
-                nombre: { $regex: `^${name}$`, $options: 'i' }
+            // ===== BUSCAR POKEMON =====
+            const pokemon = await database
+                .collection(COLLECTION_NAME)
+                .findOne({
+                    nombre: {
+                        $regex: `^${nombre}$`,
+                        $options: 'i'
+                    }
+                });
+
+            // ===== NO ENCONTRADO =====
+            if (!pokemon) {
+
+                res.writeHead(404, {
+                    'Content-Type': 'application/json'
+                });
+
+                return res.end(JSON.stringify({
+                    error: "Pokémon no encontrado"
+                }));
+            }
+
+            // ===== RESPUESTA =====
+            res.writeHead(200, {
+                'Content-Type': 'application/json'
             });
 
-            if (!pokemon) {
-                res.writeHead(404, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "No encontrado" }));
-            }
-
-            res.writeHead(200, { 'Content-Type': 'application/json' });
             return res.end(JSON.stringify({
-                name: pokemon.nombre,
-                height: pokemon.altura,
-                weight: pokemon.peso,
-                abilities: pokemon.habilidades,
-                images: {
-                    front: pokemon.imagen_frontal,
-                    back: pokemon.imagen_trasera
-                },
+                nombre: pokemon.nombre,
+                altura: pokemon.altura,
+                peso: pokemon.peso,
+                tipos: pokemon.tipos || [],
+                habilidades: pokemon.habilidades || [],
+                imagenes: pokemon.imagenes || {},
                 source: "mongo"
             }));
 
-        } catch (err) {
-            console.error("ERROR MONGO:", err.message);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            return res.end(JSON.stringify({ error: err.message }));
+        } catch (error) {
+
+            console.error("❌ ERROR API:", error);
+
+            res.writeHead(500, {
+                'Content-Type': 'application/json'
+            });
+
+            return res.end(JSON.stringify({
+                error: error.message
+            }));
         }
     }
 
-    // ===== DEFAULT =====
-    res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: "Ruta no encontrada" }));
+    // ===== 404 =====
+    res.writeHead(404, {
+        'Content-Type': 'application/json'
+    });
+
+    res.end(JSON.stringify({
+        error: "Ruta no encontrada"
+    }));
 });
 
+// ===== START =====
 server.listen(PORT, () => {
-    console.log(`🚀 Mongo API corriendo en puerto ${PORT}`);
+
+    console.log(`🚀 Mongo API corriendo en http://localhost:${PORT}`);
+
 });
