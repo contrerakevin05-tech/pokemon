@@ -1,0 +1,76 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "PokéAPI Microservice",
+    "version": "1.0.0",
+    "description": "API para consultar Pokémon desde MySQL (Supabase)"
+  },
+  "servers": [
+    {
+      "url": "https://pokeapi-1-9283.onrender.com"
+    }
+  ],
+  "paths": {
+    "/api/pokemon/{name}": {
+      "get": {
+        "summary": "Buscar Pokémon por nombre",
+        "description": "Devuelve información de un Pokémon desde la base de datos",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Nombre del Pokémon",
+            "schema": {
+              "type": "string",
+              "example": "pikachu"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pokémon encontrado",
+            "content": {
+              "application/json": {
+                "example": {
+                  "name": "Pikachu",
+                  "height": 0.4,
+                  "weight": 6,
+                  "abilities": [
+                    "Static",
+                    "Lightning Rod"
+                  ],
+                  "images": {
+                    "front": "https://...",
+                    "back": "https://..."
+                  },
+                  "source": "mysql"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No encontrado",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "No encontrado"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error del servidor",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Error interno"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
