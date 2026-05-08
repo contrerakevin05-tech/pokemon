@@ -1,0 +1,17 @@
+{
+  "name": "pokeapi-microservice",
+  "version": "1.0.0",
+  "description": "Microservicio agnóstico para consulta de Pokémon",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start-mongo": "node server-mongo.js",
+    "dev": "node --watch server.js",
+    "dev-mongo": "node --watch server-mongo.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.1",
+    "mongodb": "^7.2.0",
+    "mysql2": "^3.9.0"
+  }
+}
