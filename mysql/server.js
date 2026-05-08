@@ -1,7 +1,6 @@
 const http = require('http');
 const fs = require('fs');
 
-// usar fetch nativo
 const fetch = global.fetch;
 
 const PORT = process.env.PORT || 3000;
@@ -18,7 +17,7 @@ const server = http.createServer(async (req, res) => {
     // ===== CORS =====
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey');
 
     if (req.method === 'OPTIONS') {
         res.writeHead(204);
@@ -27,109 +26,191 @@ const server = http.createServer(async (req, res) => {
 
     // ===== SWAGGER UI =====
     if (req.url === '/docs') {
-        res.writeHead(200, { 'Content-Type': 'text/html' });
+
+        res.writeHead(200, {
+            'Content-Type': 'text/html'
+        });
+
         return res.end(`
-            <html>
-            <head>
-                <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
-            </head>
-            <body>
-                <div id="swagger-ui"></div>
-                <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-                <script>
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Swagger Pokemon API</title>
+
+            <link rel="stylesheet"
+            href="https://unpkg.com/swagger-ui-dist/swagger-ui.css" />
+
+            <style>
+                body {
+                    margin: 0;
+                    padding: 0;
+                }
+            </style>
+        </head>
+
+        <body>
+
+            <div id="swagger-ui"></div>
+
+            <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+
+            <script>
+                window.onload = () => {
                     SwaggerUIBundle({
                         url: '/swagger.json',
                         dom_id: '#swagger-ui'
                     });
-                </script>
-            </body>
-            </html>
+                };
+            </script>
+
+        </body>
+        </html>
+
         `);
     }
 
     // ===== SWAGGER JSON =====
     if (req.url === '/swagger.json') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+
+        res.writeHead(200, {
+            'Content-Type': 'application/json'
+        });
+
         return fs.createReadStream('./swagger.json').pipe(res);
     }
 
-    // ===== API =====
-    if (req.url.startsWith('/api/pokemon1/') && req.method === 'GET') {
+    // ===== API POKEMON =====
+    if (
+        req.url.startsWith('/api/pokemon1/')
+        && req.method === 'GET'
+    ) {
 
         try {
+
             if (!SUPABASE_URL || !SUPABASE_KEY) {
-                throw new Error("Variables de entorno no configuradas");
+                throw new Error('Variables de entorno no configuradas');
             }
 
-            const name = decodeURIComponent(req.url.split('/').pop()).toLowerCase().trim();
+            const nombre = decodeURIComponent(
+                req.url.split('/').pop()
+            ).toLowerCase().trim();
 
-            if (!name) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "Nombre requerido" }));
+            if (!nombre) {
+
+                res.writeHead(400, {
+                    'Content-Type': 'application/json'
+                });
+
+                return res.end(JSON.stringify({
+                    error: 'Nombre requerido'
+                }));
             }
 
-            const url = `${SUPABASE_URL}/pokemon1?nombre=ilike.*${name}*`;
+            // ===== URL SUPABASE =====
+            const url =
+`${SUPABASE_URL}/rest/v1/pokemon1?nombre=ilike.*${encodeURIComponent(nombre)}*&select=*`;
 
-            console.log("🔍 Buscando:", url);
+            console.log("🔍 Consultando:", url);
 
             const response = await fetch(url, {
+
+                method: 'GET',
+
                 headers: {
                     apikey: SUPABASE_KEY,
-                    Authorization: `Bearer ${SUPABASE_KEY}`
+                    Authorization: `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json'
                 }
             });
 
             if (!response.ok) {
-                const text = await response.text();
-                throw new Error(text);
+
+                const errorText = await response.text();
+
+                throw new Error(
+                    `Supabase Error ${response.status}: ${errorText}`
+                );
             }
 
             const data = await response.json();
 
             if (!data || data.length === 0) {
-                res.writeHead(404, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: "No encontrado" }));
+
+                res.writeHead(404, {
+                    'Content-Type': 'application/json'
+                });
+
+                return res.end(JSON.stringify({
+                    error: 'Pokemon no encontrado'
+                }));
             }
 
             const p = data[0];
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.writeHead(200, {
+                'Content-Type': 'application/json'
+            });
+
             return res.end(JSON.stringify({
-                name: p.nombre,
-                height: p.altura,
-                weight: p.peso,
-                abilities: Array.isArray(p.habilidades)
+
+                nombre: p.nombre,
+                altura: p.altura,
+                peso: p.peso,
+
+                habilidades: Array.isArray(p.habilidades)
                     ? p.habilidades
                     : safeParse(p.habilidades),
-                images: {
-                    front: p.imagen_frontal,
-                    back: p.imagen_trasera
-                },
-                source: "mysql"
+
+                imagen_frontal: p.imagen_frontal,
+                imagen_trasera: p.imagen_trasera,
+
+                database: 'Supabase MySQL'
+
             }));
 
-        } catch (err) {
-            console.error("❌ ERROR SQL:", err.message);
+        } catch (error) {
 
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: err.message }));
+            console.error("❌ ERROR:", error.message);
+
+            res.writeHead(500, {
+                'Content-Type': 'application/json'
+            });
+
+            return res.end(JSON.stringify({
+                error: error.message
+            }));
         }
     }
 
-    // ===== DEFAULT =====
-    res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: "Ruta no encontrada" }));
+    // ===== RUTA NO ENCONTRADA =====
+    res.writeHead(404, {
+        'Content-Type': 'application/json'
+    });
+
+    res.end(JSON.stringify({
+        error: 'Ruta no encontrada'
+    }));
 });
 
-// parse seguro
+// ===== PARSE JSON SEGURO =====
 function safeParse(value) {
+
     try {
+
         return JSON.parse(value);
+
     } catch {
-        return value ? [value] : [];
+
+        return value
+            ? [value]
+            : [];
     }
 }
 
 server.listen(PORT, () => {
+
     console.log(`🚀 SQL API funcionando en puerto ${PORT}`);
+
+    console.log(`📘 Swagger: http://localhost:${PORT}/docs`);
 });
