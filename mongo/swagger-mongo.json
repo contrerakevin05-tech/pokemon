@@ -1,0 +1,113 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "PokéAPI MongoDB",
+    "version": "1.0.0",
+    "description": "API conectada a MongoDB Atlas para consultar Pokémon"
+  },
+  "servers": [
+    {
+      "url": "https://pokeapi-6r6g.onrender.com"
+    }
+  ],
+  "paths": {
+    "/api/pokemon/{name}": {
+      "get": {
+        "summary": "Buscar Pokémon en MongoDB",
+        "description": "Devuelve información de un Pokémon almacenado en MongoDB Atlas",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Nombre del Pokémon",
+            "schema": {
+              "type": "string",
+              "example": "pikachu"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pokémon encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pokemon"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No encontrado",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "No encontrado"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error del servidor",
+            "content": {
+              "application/json": {
+                "example": {
+                  "error": "Error interno"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Pokemon": {
+        "type": "object",
+        "required": ["name", "height", "weight", "abilities", "images", "source"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Pikachu"
+          },
+          "height": {
+            "type": "number",
+            "example": 0.4
+          },
+          "weight": {
+            "type": "number",
+            "example": 6
+          },
+          "abilities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["Static", "Lightning Rod"]
+          },
+          "images": {
+            "type": "object",
+            "properties": {
+              "front": {
+                "type": "string",
+                "format": "uri",
+                "example": "https://pokeapi.co/media/sprites/pokemon/25.png"
+              },
+              "back": {
+                "type": "string",
+                "format": "uri",
+                "example": "https://pokeapi.co/media/sprites/pokemon/back/25.png"
+              }
+            }
+          },
+          "source": {
+            "type": "string",
+            "example": "mongo"
+          }
+        }
+      }
+    }
+  }
+}
