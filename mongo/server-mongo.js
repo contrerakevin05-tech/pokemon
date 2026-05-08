@@ -6,7 +6,7 @@ const path = require('path');
 const PORT = process.env.PORT || 3001;
 
 // ⚠️ PEGA AQUÍ TU URI REAL DE MONGODB ATLAS
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://kevin:<db_password>@pokemon1.ddcxqpt.mongodb.net/?appName=pokemon1";
+const MONGO_URI = "mongodb+srv://kevin:1234@pokemon1.ddcxqpt.mongodb.net/?retryWrites=true&w=majority&appName=pokemon1";
 
 // ===== CONFIG =====
 const DB_NAME = "pokeapi";
