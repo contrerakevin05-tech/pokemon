@@ -55,6 +55,8 @@ const server = http.createServer(async (req, res) => {
             // 🔥 FIX REAL: EQ (NO ILIKE)
             const url = `${SUPABASE_URL}/rest/v1/pokemon1?select=*&nombre=eq.${encodeURIComponent(nombre)}`;
 
+            console.log("🔥 URL FINAL:", url);
+
             const response = await fetch(url, {
                 method: 'GET',
                 headers: {
