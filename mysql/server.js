@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const http = require('http');
 const fs = require('fs');
 
@@ -5,20 +7,44 @@ const fetch = global.fetch;
 
 const PORT = process.env.PORT || 3000;
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_KEY;
+// =====================================================
+// ================= VARIABLES ENTORNO =================
+// =====================================================
 
-// ===== VALIDAR VARIABLES =====
+const SUPABASE_URL =
+    process.env.SUPABASE_URL;
+
+const SUPABASE_KEY =
+    process.env.SUPABASE_KEY;
+
+// =====================================================
+// ================= VALIDACIÓN ========================
+// =====================================================
+
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-    console.error("❌ Faltan variables de entorno SUPABASE");
+
+    console.error(
+        "❌ Faltan variables de entorno"
+    );
 }
 
-const server = http.createServer(async (req, res) => {
+// =====================================================
+// ================= SERVIDOR ==========================
+// =====================================================
 
-    console.log("📥 URL RECIBIDA:", req.url);
+const server = http.createServer(
+async (req, res) => {
 
-    // ===== CORS =====
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    console.log("📥 URL:", req.url);
+
+    // =================================================
+    // ==================== CORS =======================
+    // =================================================
+
+    res.setHeader(
+        'Access-Control-Allow-Origin',
+        '*'
+    );
 
     res.setHeader(
         'Access-Control-Allow-Methods',
@@ -30,7 +56,10 @@ const server = http.createServer(async (req, res) => {
         'Content-Type, Authorization, apikey'
     );
 
-    // ===== PREFLIGHT =====
+    // =================================================
+    // ================= PREFLIGHT =====================
+    // =================================================
+
     if (req.method === 'OPTIONS') {
 
         res.writeHead(204);
@@ -38,9 +67,25 @@ const server = http.createServer(async (req, res) => {
         return res.end();
     }
 
-    // =====================================================
-    // ==================== SWAGGER UI ======================
-    // =====================================================
+    // =================================================
+    // ==================== HOME =======================
+    // =================================================
+
+    if (req.url === '/') {
+
+        res.writeHead(200, {
+            'Content-Type': 'application/json'
+        });
+
+        return res.end(JSON.stringify({
+            message:
+                "Pokémon MySQL API funcionando 🚀"
+        }));
+    }
+
+    // =================================================
+    // ================= SWAGGER UI ====================
+    // =================================================
 
     if (req.url === '/docs') {
 
@@ -49,6 +94,7 @@ const server = http.createServer(async (req, res) => {
         });
 
         return res.end(`
+
         <!DOCTYPE html>
 
         <html lang="es">
@@ -63,10 +109,13 @@ const server = http.createServer(async (req, res) => {
             href="https://unpkg.com/swagger-ui-dist/swagger-ui.css">
 
             <style>
+
                 body {
+
                     margin: 0;
                     padding: 0;
                 }
+
             </style>
 
         </head>
@@ -82,7 +131,9 @@ const server = http.createServer(async (req, res) => {
                 window.onload = () => {
 
                     SwaggerUIBundle({
+
                         url: '/swagger.json',
+
                         dom_id: '#swagger-ui'
                     });
 
@@ -96,9 +147,9 @@ const server = http.createServer(async (req, res) => {
         `);
     }
 
-    // =====================================================
-    // ================== SWAGGER JSON ======================
-    // =====================================================
+    // =================================================
+    // ================= SWAGGER JSON ==================
+    // =================================================
 
     if (req.url === '/swagger.json') {
 
@@ -111,62 +162,91 @@ const server = http.createServer(async (req, res) => {
             .pipe(res);
     }
 
-    // =====================================================
-    // ==================== API POKEMON =====================
-    // =====================================================
+    // =================================================
+    // ================= API POKEMON ===================
+    // =================================================
 
     if (
         req.url.startsWith('/api/pokemon/')
-        && req.method === 'GET'
+        &&
+        req.method === 'GET'
     ) {
 
         try {
 
-            // ===== EXTRAER NOMBRE =====
+            // =============================================
+            // =============== NOMBRE ======================
+            // =============================================
+
             const nombre = decodeURIComponent(
                 req.url.split('/').pop()
-            ).toLowerCase().trim();
+            )
+            .trim()
+            .toLowerCase();
 
-            console.log("🔍 Pokemon:", nombre);
+            console.log(
+                "🔍 Buscando:",
+                nombre
+            );
 
             if (!nombre) {
 
                 res.writeHead(400, {
-                    'Content-Type': 'application/json'
+                    'Content-Type':
+                        'application/json'
                 });
 
                 return res.end(JSON.stringify({
-                    error: 'Nombre requerido'
+                    error:
+                        'Nombre requerido'
                 }));
             }
 
-            // ===== URL SUPABASE =====
+            // =============================================
+            // ============== URL SUPABASE =================
+            // =============================================
+
             const supabaseUrl =
-`${SUPABASE_URL}/rest/v1/pokemon1?nombre=ilike.*${encodeURIComponent(nombre)}*&select=*`;
 
-            console.log("🌐 URL SUPABASE:", supabaseUrl);
+`${SUPABASE_URL}/rest/v1/pokemon1?select=*&nombre=ilike.*${encodeURIComponent(nombre)}*`;
 
-            // ===== CONSULTA =====
-            const response = await fetch(supabaseUrl, {
+            console.log(
+                "🌐 Supabase URL:",
+                supabaseUrl
+            );
 
-                method: 'GET',
+            // =============================================
+            // =============== CONSULTA ====================
+            // =============================================
 
-                headers: {
+            const response = await fetch(
+                supabaseUrl,
+                {
 
-                    apikey: SUPABASE_KEY,
+                    method: 'GET',
 
-                    Authorization:
-                        `Bearer ${SUPABASE_KEY}`,
+                    headers: {
 
-                    'Content-Type':
-                        'application/json'
+                        apikey:
+                            SUPABASE_KEY,
+
+                        Authorization:
+                            `Bearer ${SUPABASE_KEY}`,
+
+                        'Content-Type':
+                            'application/json'
+                    }
                 }
-            });
+            );
 
-            // ===== ERROR SUPABASE =====
+            // =============================================
+            // ================= ERROR =====================
+            // =============================================
+
             if (!response.ok) {
 
-                const errorText = await response.text();
+                const errorText =
+                    await response.text();
 
                 console.error(
                     "❌ ERROR SUPABASE:",
@@ -178,49 +258,87 @@ const server = http.createServer(async (req, res) => {
                 );
             }
 
-            const data = await response.json();
+            // =============================================
+            // ================= DATA ======================
+            // =============================================
 
-            console.log("📦 DATA:", data);
+            const data =
+                await response.json();
 
-            // ===== NO ENCONTRADO =====
-            if (!data || data.length === 0) {
+            console.log(
+                "📦 DATA:",
+                data
+            );
+
+            // =============================================
+            // ============ NO ENCONTRADO ==================
+            // =============================================
+
+            if (
+                !data ||
+                data.length === 0
+            ) {
 
                 res.writeHead(404, {
-                    'Content-Type': 'application/json'
+                    'Content-Type':
+                        'application/json'
                 });
 
                 return res.end(JSON.stringify({
-                    error: 'Pokemon no encontrado'
+                    error:
+                        'Pokemon no encontrado'
                 }));
             }
 
             const p = data[0];
 
-            // ===== RESPUESTA =====
+            // =============================================
+            // ============== RESPUESTA ====================
+            // =============================================
+
             const pokemon = {
 
-                name: p.nombre,
+                name:
+                    p.nombre,
 
-                height: p.altura,
+                height:
+                    p.altura,
 
-                weight: p.peso,
+                weight:
+                    p.peso,
 
-                abilities: Array.isArray(p.habilidades)
+                abilities:
+
+                    Array.isArray(
+                        p.habilidades
+                    )
+
                     ? p.habilidades
-                    : safeParse(p.habilidades),
+
+                    : safeParse(
+                        p.habilidades
+                    ),
 
                 images: {
 
-                    front: p.imagen_frontal,
+                    front:
+                        p.imagen_frontal,
 
-                    back: p.imagen_trasera
+                    back:
+                        p.imagen_trasera
                 },
 
-                source: 'mysql'
+                source:
+                    'mysql'
             };
 
+            // =============================================
+            // ================= RESPONSE ==================
+            // =============================================
+
             res.writeHead(200, {
-                'Content-Type': 'application/json'
+                'Content-Type':
+                    'application/json'
             });
 
             return res.end(
@@ -235,30 +353,35 @@ const server = http.createServer(async (req, res) => {
             );
 
             res.writeHead(500, {
-                'Content-Type': 'application/json'
+                'Content-Type':
+                    'application/json'
             });
 
             return res.end(JSON.stringify({
-                error: error.message
+
+                error:
+                    error.message
             }));
         }
     }
 
-    // =====================================================
-    // ================== RUTA NO EXISTE ===================
-    // =====================================================
+    // =================================================
+    // ================== 404 ===========================
+    // =================================================
 
     res.writeHead(404, {
-        'Content-Type': 'application/json'
+        'Content-Type':
+            'application/json'
     });
 
     res.end(JSON.stringify({
-        error: 'Ruta no encontrada'
+        error:
+            'Ruta no encontrada'
     }));
 });
 
 // =====================================================
-// ================= SAFE JSON PARSE ====================
+// ================= SAFE PARSE ========================
 // =====================================================
 
 function safeParse(value) {
@@ -276,13 +399,13 @@ function safeParse(value) {
 }
 
 // =====================================================
-// ==================== START SERVER ====================
+// ================= START SERVER ======================
 // =====================================================
 
 server.listen(PORT, () => {
 
     console.log(
-        `🚀 SQL API funcionando en puerto ${PORT}`
+        `🚀 API MySQL funcionando en puerto ${PORT}`
     );
 
     console.log(
