@@ -33,7 +33,7 @@ const swaggerSpec = swaggerJsdoc({
             }
         ]
     },
-    apis: ['./server.js']
+    apis: ['./server-mongo.js']
 });
 
 // ================= CONEXIÓN MONGO =================
