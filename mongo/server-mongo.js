@@ -79,7 +79,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ================= SWAGGER JSON =================
-    if (req.url === '/swagger-mongo.json') {
+    if (req.url === './swagger-mongo.json') {
 
         res.writeHead(200, {
             'Content-Type': 'application/json'
