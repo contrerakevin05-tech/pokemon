@@ -27,7 +27,7 @@ const swaggerSpec = swaggerJsdoc({
         },
         servers: [
             {
-                url: 'https://pokemon-89gd.onrender.com'
+                url: `https://pokemon-89gd.onrender.com`
             }
         ]
     },
@@ -56,12 +56,12 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ================= SWAGGER UI =================
-    if (req.url.startsWith('/api-docs')) {
+    if (req.url.startsWith('/docs')) {
 
         const express = require('express');
         const app = express();
 
-        app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+        app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
         return app(req, res);
     }
@@ -217,5 +217,5 @@ function safeParse(value) {
 server.listen(PORT, () => {
 
     console.log(`🚀 API corriendo en puerto ${PORT}`);
-    console.log(`📘 Swagger: https://pokemon-89gd.onrender.com/api-docs`);
+    console.log(`📘 Swagger: https://pokemon-89gd.onrender.com/docs`);
 });
