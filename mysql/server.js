@@ -3,6 +3,9 @@ require('dotenv').config();
 const http = require('http');
 const fetch = global.fetch;
 
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
+
 const PORT = process.env.PORT || 3000;
 
 // ================= ENV =================
@@ -13,12 +16,30 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
     console.error("❌ Faltan variables de entorno");
 }
 
+// ================= SWAGGER =================
+const swaggerSpec = swaggerJsdoc({
+    definition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'Pokémon API',
+            version: '1.0.0',
+            description: 'Microservicio de Pokémon con Supabase'
+        },
+        servers: [
+            {
+                url: 'https://pokemon-89gd.onrender.com'
+            }
+        ]
+    },
+    apis: ['./server.js']
+});
+
 // ================= SERVER =================
 const server = http.createServer(async (req, res) => {
 
     console.log("📥", req.method, req.url);
 
-    // CORS
+    // ================= CORS =================
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey');
@@ -28,13 +49,64 @@ const server = http.createServer(async (req, res) => {
         return res.end();
     }
 
-    // HOME
+    // ================= SWAGGER JSON =================
+    if (req.url === '/swagger.json') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify(swaggerSpec));
+    }
+
+    // ================= SWAGGER UI =================
+    if (req.url.startsWith('/api-docs')) {
+
+        const express = require('express');
+        const app = express();
+
+        app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+        return app(req, res);
+    }
+
+    /**
+     * @swagger
+     * /:
+     *   get:
+     *     summary: Ruta principal
+     *     description: Verifica si la API está funcionando
+     *     responses:
+     *       200:
+     *         description: API funcionando correctamente
+     */
+
+    // ================= HOME =================
     if (req.url === '/') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
+
         return res.end(JSON.stringify({
             message: "Pokémon API funcionando 🚀"
         }));
     }
+
+    /**
+     * @swagger
+     * /api/pokemon/{nombre}:
+     *   get:
+     *     summary: Obtener un Pokémon
+     *     description: Busca un Pokémon por nombre en Supabase
+     *     parameters:
+     *       - in: path
+     *         name: nombre
+     *         required: true
+     *         schema:
+     *           type: string
+     *         description: Nombre del Pokémon
+     *     responses:
+     *       200:
+     *         description: Pokémon encontrado
+     *       404:
+     *         description: Pokémon no encontrado
+     *       500:
+     *         description: Error interno del servidor
+     */
 
     // ================= POKEMON =================
     if (req.url.startsWith('/api/pokemon/') && req.method === 'GET') {
@@ -47,13 +119,15 @@ const server = http.createServer(async (req, res) => {
 
             if (!nombre) {
                 res.writeHead(400);
+
                 return res.end(JSON.stringify({
                     error: "Nombre requerido"
                 }));
             }
 
-            // 🔥 FIX REAL: EQ (NO ILIKE)
-            const url =`${SUPABASE_URL}/rest/v1/pokemon1?nombre=ilike.${encodeURIComponent(nombre)}`;
+            // ================= SUPABASE =================
+            const url =
+                `${SUPABASE_URL}/rest/v1/pokemon1?nombre=ilike.${encodeURIComponent(nombre)}`;
 
             console.log("🔥 URL FINAL:", url);
 
@@ -72,9 +146,10 @@ const server = http.createServer(async (req, res) => {
 
             const data = await response.json();
 
-            // 🔥 FIX: validación fuerte
             if (!Array.isArray(data) || data.length === 0) {
+
                 res.writeHead(404);
+
                 return res.end(JSON.stringify({
                     error: "Pokémon no encontrado"
                 }));
@@ -82,7 +157,7 @@ const server = http.createServer(async (req, res) => {
 
             const p = data[0];
 
-            // ================= RESPONSE UNIFICADA =================
+            // ================= RESPONSE =================
             const pokemon = {
                 nombre: p.nombre,
                 altura: p.altura,
@@ -95,7 +170,10 @@ const server = http.createServer(async (req, res) => {
                 source: "supabase"
             };
 
-            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.writeHead(200, {
+                'Content-Type': 'application/json'
+            });
+
             return res.end(JSON.stringify(pokemon));
 
         } catch (error) {
@@ -103,29 +181,41 @@ const server = http.createServer(async (req, res) => {
             console.error("❌ ERROR:", error.message);
 
             res.writeHead(500);
+
             return res.end(JSON.stringify({
                 error: error.message
             }));
         }
     }
 
-    // 404 GENERAL
+    // ================= 404 =================
     res.writeHead(404);
-    res.end(JSON.stringify({ error: "Ruta no encontrada" }));
+
+    res.end(JSON.stringify({
+        error: "Ruta no encontrada"
+    }));
 });
 
 // ================= SAFE PARSE =================
 function safeParse(value) {
+
     try {
+
         return typeof value === "string"
             ? JSON.parse(value)
             : value || [];
+
     } catch {
-        return value ? [value] : [];
+
+        return value
+            ? [value]
+            : [];
     }
 }
 
 // ================= START =================
 server.listen(PORT, () => {
+
     console.log(`🚀 API corriendo en puerto ${PORT}`);
+    console.log(`📘 Swagger: https://pokemon-89gd.onrender.com/api-docs`);
 });
