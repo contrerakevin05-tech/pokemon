@@ -53,7 +53,7 @@ const server = http.createServer(async (req, res) => {
             }
 
             // 🔥 FIX REAL: EQ (NO ILIKE)
-            const url =`${SUPABASE_URL}/rest/v1/pokemon1?select=*&nombre=ilike.${encodeURIComponent(nombre)}`;
+            const url =`${SUPABASE_URL}/rest/v1/pokemon1?nombre=ilike.${encodeURIComponent(nombre)}`;
 
             console.log("🔥 URL FINAL:", url);
 
